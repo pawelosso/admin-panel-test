@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+        import { getStorage, ref, getDownloadURL, listAll, uploadBytes} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-storage.js";
+        import {getDatabase, ref as databaseref, push, set, onValue} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCF22_tg55gEtwnx3LIKMkbv6-tF9oiPms",
+            authDomain: "adminpanel-5f1aa.firebaseapp.com",
+            databaseURL: "https://adminpanel-5f1aa-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "adminpanel-5f1aa",
+            storageBucket: "adminpanel-5f1aa.appspot.com",
+            messagingSenderId: "114298445098",
+            appId: "1:114298445098:web:6c6b100abb6628d9e61253"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+        const database = getDatabase(app);
+        const databaseRef = databaseref(database, 'images')
+
+        const form = document.querySelector('form');
+        const selectedImg = document.querySelector('form input')
+        const list = document.querySelector('.images-list')
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+
+            const file = selectedImg.files[0]
+            if (file) {
+                const storageRef = ref(storage, 'Realizations/' + file.name);
+                
+                uploadBytes(storageRef, file)
+                    .then(snapshot => {
+                        getDownloadURL(snapshot.ref)
+                            .then(url => {
+                                const newImageRef = push(databaseRef);
+                                set(newImageRef, url);
+                            })
+                    })
+            }
+
+            selectedImg.value = null;
+        })
+
+        onValue(databaseRef, snapshot => {
+            list.innerHTML = "";
+            snapshot.forEach(element => {
+                const downloadURL = element.val();
+                const img = document.createElement("img");
+                img.src = downloadURL;
+                list.appendChild(img);
+            })
+        })
+
+    </script>
+
+    <form class="image-field">
+        <input type="file" id="imageInput" accept="image/*">
+        <button type="submit">Prześlij zdjęcia</button>
+    </form>
+
+    <ul class="images-list"></ul>
+
+</body>
+
+</html>
