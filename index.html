@@ -12,8 +12,8 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
-        import { getStorage, ref, getDownloadURL, listAll, uploadBytes} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-storage.js";
-        import {getDatabase, ref as databaseref, push, set, onValue} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+        import { getStorage, ref, getDownloadURL, listAll, uploadBytes, deleteObject} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-storage.js";
+        import {getDatabase, ref as databaseref, push, set, onValue, remove} from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
         // TODO: Add SDKs for Firebase products that you want to use
         // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -62,9 +62,59 @@
             list.innerHTML = "";
             snapshot.forEach(element => {
                 const downloadURL = element.val();
+                const key = element.key
+
+                const li = document.createElement("li")
                 const img = document.createElement("img");
-                img.src = downloadURL;
-                list.appendChild(img);
+                const deleteButton = document.createElement("div")
+
+                let deletingInProgress = false;
+
+                deleteButton.addEventListener("click", () => {
+                    
+                    if (deletingInProgress) {
+                    console.log("Operacja usuwania w toku. Poczekaj na jej zakończenie.");
+                    return;
+                    }
+
+                    deletingInProgress = true;
+
+                    const shortUrl = downloadURL.substring(downloadURL.lastIndexOf("/") + 1);
+                    const startIndex = shortUrl.lastIndexOf("/") + 1;
+                    const endIndex = shortUrl.indexOf("?alt=");
+
+                    const encodedFileName = shortUrl.substring(startIndex, endIndex);
+                    const decodedFileName = decodeURIComponent(encodedFileName);
+
+                    const photoToDelete = ref(storage, decodedFileName);
+                    const dbRef = databaseref(database, "images/" + key)
+
+
+                    deleteObject(photoToDelete)
+                        .then(()=>  console.log("Zdjęcie usunięte z Firebase Storage."))
+                        .catch(storageError => {
+                            console.error("Błąd podczas usuwania zdjęcia z Firebase Storage:", storageError)
+                        })
+                        .then(()=> {
+                            remove(dbRef)
+                                .then(()=> console.log("Odnośnik do zdjęcia usunięty z Realtime Database."))
+                                .catch(()=> {
+                                        console.error("Błąd podczas usuwania odnośnika z Realtime Database:", databaseError)
+                                })
+                        })
+                        .finally(()=> deletingInProgress = false)
+                })
+                
+                img.src = downloadURL
+                
+                img.addEventListener('load', ()=> {
+                    deleteButton.innerHTML = "X"
+                    li.appendChild(deleteButton)
+                })
+                
+                li.appendChild(img)
+                list.appendChild(li);
+            
             })
         })
 
